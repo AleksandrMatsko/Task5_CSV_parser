@@ -4,14 +4,22 @@
 
 
 int main() {
-    std::ifstream file("test.csv");
+    std::string file_name = "test.csv";
+    std::ifstream file(file_name);
     if (!file.is_open()) {
-        //exception
-        return 1;
+        throw FileNotOpen(file_name);
     }
-    CSVParser<int, char, double> parser(file, 0);
-    for (std::tuple<int, char, double> rs : parser) {
-        std::cout << rs <<  std::endl;
+    try {
+        CSVParser<int, char, double, std::string> parser(file, 1);
+        for (std::tuple<int, char, double, std::string> rs : parser) {
+            std::cout << rs <<  std::endl;
+        }
+    }
+    catch (InvalidLineFormat& ex) {
+        std::cerr << ex.what() << std::endl;
+    }
+    catch (std::exception& ex) {
+        std::cerr << ex.what() << std::endl;
     }
     return 0;
 }
