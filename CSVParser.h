@@ -29,7 +29,7 @@ public:
         explicit Iterator(const std::tuple<Types...>* lines_ptr);
 
         const std::tuple<Types...>& operator*();
-        Iterator operator++();
+        Iterator& operator++();
         const Iterator operator++(int);
         bool operator==(const Iterator &it);
         bool operator!=(const Iterator &it);
@@ -178,7 +178,7 @@ const std::tuple<Types...>& CSVParser<Types...>::Iterator::operator*() {
 }
 
 template<typename... Types>
-typename CSVParser<Types...>::Iterator CSVParser<Types...>::Iterator::operator++() {
+typename CSVParser<Types...>::Iterator& CSVParser<Types...>::Iterator::operator++() {
     _lines_ptr++;
     return *this;
 }
