@@ -26,4 +26,26 @@ public:
     size_t getLineNum();
 };
 
+class IndexOutOfRange : public std::exception {
+private:
+    std::string _message;
+
+public:
+    IndexOutOfRange();
+    const char* what();
+};
+
+class UnknownType : public std::exception {
+private:
+    std::string _message;
+    size_t _line_number;
+    size_t _cell_number;
+
+public:
+    UnknownType(size_t line_number, size_t cell_number);
+    const char* what();
+    size_t getLineNumber();
+    size_t getCellNumber();
+};
+
 #endif //TASK5_CSV_PARSER_EXCEPTIONS_H

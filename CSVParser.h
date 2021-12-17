@@ -5,7 +5,7 @@
 #include "Exceptions.h"
 #include <string>
 #include <sstream>
-
+#include <typeinfo>
 
 const char LINE_DELIMITER = '\n';
 const char CELL_DELIMITER = ',';
@@ -17,15 +17,16 @@ private:
     size_t _filled_size;
     size_t _max_size;
 
-    void parseLine(std::string &str, size_t line_num);
+    void parseLine(std::string &str);
     void reallocate();
 
 public:
     class Iterator {
     private:
-        const std::tuple<Types...>* _elements_ptr;
+        const std::tuple<Types...>* _lines_ptr;
+
     public:
-        explicit Iterator(const std::tuple<Types...>* elements_ptr);
+        explicit Iterator(const std::tuple<Types...>* lines_ptr);
 
         const std::tuple<Types...>& operator*();
         Iterator operator++();
@@ -45,6 +46,7 @@ public:
 
 };
 
+
 template<typename T_element>
 struct converter {
     static bool check(const std::string &str) {
@@ -59,8 +61,9 @@ struct converter {
         T_element t;
         std::istringstream stream(str);
         stream >> t;
-        if (!stream) {
-            //exception
+        stream >> std::ws;
+        if (!stream.eof()) {
+            throw InvalidLineFormat(0);
         }
         return t;
     }
@@ -69,18 +72,28 @@ struct converter {
 template<typename T_tuple, typename T_element, size_t N>
 struct tuple_adder {
     static void add(T_tuple& tup, T_element new_el, size_t index) {
-        tuple_adder<T_tuple, T_element, N - 1>::add(tup, new_el, index);
-        if (index == N) {
-            std::get<N>(tup) = new_el;
+        if (N >= sizeof(tup)) {
+            throw IndexOutOfRange();
         }
+        if (index == N && converter<typeof std::get<N>(tup)>::check(new_el)) {
+            std::get<N>(tup) = converter<typeof std::get<N>(tup)>::convert(new_el);
+            return;
+        }
+        else if (index == N && !converter<typeof std::get<N>(tup)>::check(new_el)) {
+            throw UnknownType(0, index + 1);
+        }
+        tuple_adder<T_tuple, T_element, N - 1>::add(tup, new_el, index);
     }
 };
 
 template<typename T_tuple, typename T_element>
 struct tuple_adder<T_tuple, T_element, 0> {
     static void add(T_tuple& tup, T_element new_el, size_t index) {
-        if (index == 0) {
-            std::get<0>(tup) = new_el;
+        if (index == 0 && converter<typeof std::get<0>(tup)>::check(new_el)) {
+            std::get<0>(tup) = converter<typeof std::get<0>(tup)>::convert(new_el);
+        }
+        else if (index == 0 && !converter<typeof std::get<0>(tup)>::check(new_el)) {
+            throw UnknownType(0, index + 1);
         }
     }
 };
@@ -98,35 +111,16 @@ void CSVParser<Types...>::reallocate() {
 }
 
 template<typename... Types>
-void CSVParser<Types...>::parseLine(std::string &str, size_t line_num) {
+void CSVParser<Types...>::parseLine(std::string &str) {
     std::tuple<Types...> tup;
     std::string tmp;
     std::istringstream stream(str);
     size_t index = 0;
     while (std::getline(stream, tmp, CELL_DELIMITER)) {
         if (index == sizeof...(Types)) {
-            throw InvalidLineFormat(line_num);
+            throw InvalidLineFormat(0);
         }
-        if (converter<int>::check(tmp)) {
-            auto element = converter<int>::convert(tmp);
-            tuple_adder<std::tuple<Types...>, int, sizeof...(Types) - 1>::add(tup, element, index);
-        }
-        else if (converter<char>::check(tmp)) {
-            auto element = converter<char>::convert(tmp);
-            tuple_adder<std::tuple<Types...>, char, sizeof...(Types) - 1>::add(tup, element, index);
-        }
-        else if (converter<double>::check(tmp)) {
-            auto element = converter<double>::convert(tmp);
-            tuple_adder<std::tuple<Types...>, double, sizeof...(Types) - 1>::add(tup, element, index);
-        }
-        else if (converter<float>::check(tmp)) {
-            auto element = converter<float>::convert(tmp);
-            tuple_adder<std::tuple<Types...>, float, sizeof...(Types) - 1>::add(tup, element, index);
-        }
-        /*else if (converter<std::string>::check(tmp)) {
-            auto element = converter<std::string>::convert(tmp);
-            tuple_adder<std::tuple<Types...>, std::string, sizeof...(Types) - 1>::add(tup, element, index);
-        }*/
+        tuple_adder<std::tuple<Types...>, std::string, sizeof...(Types) - 1>::add(tup, tmp, index);
         index += 1;
     }
     _lines[_filled_size] = tup;
@@ -145,9 +139,17 @@ CSVParser<Types...>::CSVParser(std::ifstream &in, size_t lines_to_skip) {
     for (size_t i = 0; i < lines_to_skip; i++) {
         std::getline(in, line, LINE_DELIMITER);
     }
-    size_t line_num = lines_to_skip;
+    size_t line_num = lines_to_skip + 1;
     while (std::getline(in, line, LINE_DELIMITER)) {
-        parseLine(line, line_num);
+        try {
+            parseLine(line);
+        }
+        catch (InvalidLineFormat& ex) {
+            throw InvalidLineFormat(line_num);
+        }
+        catch (UnknownType& ex) {
+            throw UnknownType(line_num, ex.getCellNumber());
+        }
         line_num += 1;
     }
 }
@@ -158,7 +160,7 @@ CSVParser<Types...>::~CSVParser() {
 }
 
 template<typename... Types>
-CSVParser<Types...>::Iterator::Iterator(const std::tuple<Types...>* elements_ptr) : _elements_ptr(elements_ptr) {}
+CSVParser<Types...>::Iterator::Iterator(const std::tuple<Types...>* lines_ptr) : _lines_ptr(lines_ptr) {}
 
 template<typename... Types>
 typename CSVParser<Types...>::Iterator CSVParser<Types...>::begin() {
@@ -172,30 +174,30 @@ typename CSVParser<Types...>::Iterator CSVParser<Types...>::end() {
 
 template<typename... Types>
 const std::tuple<Types...>& CSVParser<Types...>::Iterator::operator*() {
-    return *_elements_ptr;
+    return *_lines_ptr;
 }
 
 template<typename... Types>
 typename CSVParser<Types...>::Iterator CSVParser<Types...>::Iterator::operator++() {
-    _elements_ptr++;
+    _lines_ptr++;
     return *this;
 }
 
 template<typename... Types>
 const typename CSVParser<Types...>::Iterator CSVParser<Types...>::Iterator::operator++(int) {
-    Iterator tmp(_elements_ptr);
-    _elements_ptr++;
+    Iterator tmp(_lines_ptr);
+    _lines_ptr++;
     return tmp;
 }
 
 template<typename... Types>
 bool CSVParser<Types...>::Iterator::operator==(const Iterator &it) {
-    return _elements_ptr == it._elements_ptr;
+    return _lines_ptr == it._lines_ptr;
 }
 
 template<typename... Types>
 bool CSVParser<Types...>::Iterator::operator!=(const Iterator &it) {
-    return _elements_ptr != it._elements_ptr;
+    return _lines_ptr != it._lines_ptr;
 }
 
 #endif //TASK5_CSV_PARSER_CSVPARSER_H

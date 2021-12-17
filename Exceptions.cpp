@@ -25,3 +25,30 @@ const char *InvalidLineFormat::what() {
 size_t InvalidLineFormat::getLineNum() {
     return _line_num;
 }
+
+IndexOutOfRange::IndexOutOfRange() {
+    _message = "Error: index out of range";
+}
+
+const char *IndexOutOfRange::what() {
+    return _message.c_str();
+}
+
+UnknownType::UnknownType(size_t line_number, size_t cell_number) {
+    _message = "Error: unknown type of the cell in line - " + std::to_string(line_number) +
+               ", cell - " + std::to_string(cell_number);
+    _line_number = line_number;
+    _cell_number = cell_number;
+}
+
+const char *UnknownType::what() {
+    return _message.c_str();
+}
+
+size_t UnknownType::getLineNumber() {
+    return _line_number;
+}
+
+size_t UnknownType::getCellNumber() {
+    return _cell_number;
+}

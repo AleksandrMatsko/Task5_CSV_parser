@@ -3,12 +3,16 @@
 
 #include <ostream>
 #include <tuple>
+#include "Exceptions.h"
 
 template<typename T_tuple, size_t N>
 struct TuplePrinter {
-    static void print(std::ostream& out, const T_tuple& value) {
-        TuplePrinter<T_tuple, N - 1>::print(out, value);
-        out << ", " << std::get<N>(value);
+    static void print(std::ostream& out, const T_tuple& tup) {
+        if (N >= sizeof(tup)) {
+            throw IndexOutOfRange();
+        }
+        TuplePrinter<T_tuple, N - 1>::print(out, tup);
+        out << ", " << std::get<N>(tup);
     }
 };
 
