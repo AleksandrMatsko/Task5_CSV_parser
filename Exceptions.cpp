@@ -13,7 +13,7 @@ const std::string& FileNotOpen::getFileName() {
     return _file_name;
 }
 
-InvalidLineFormat::InvalidLineFormat(size_t line_num) {
+InvalidLineFormat::InvalidLineFormat(int line_num) {
     _message = "Error: invalid line format (line - " + std::to_string(line_num) + ")";
     _line_num = line_num;
 }
@@ -22,7 +22,7 @@ const char *InvalidLineFormat::what() {
     return _message.c_str();
 }
 
-size_t InvalidLineFormat::getLineNum() {
+int InvalidLineFormat::getLineNum() {
     return _line_num;
 }
 
@@ -34,7 +34,7 @@ const char *IndexOutOfRange::what() {
     return _message.c_str();
 }
 
-UnknownType::UnknownType(size_t line_number, size_t cell_number) {
+UnknownType::UnknownType(int line_number, int cell_number) {
     _message = "Error: unknown type of the cell in line - " + std::to_string(line_number) +
                ", cell - " + std::to_string(cell_number);
     _line_number = line_number;
@@ -45,10 +45,23 @@ const char *UnknownType::what() {
     return _message.c_str();
 }
 
-size_t UnknownType::getLineNumber() {
+int UnknownType::getLineNumber() {
     return _line_number;
 }
 
-size_t UnknownType::getCellNumber() {
+int UnknownType::getCellNumber() {
     return _cell_number;
+}
+
+InvalidArgument::InvalidArgument(const std::string &func_name) {
+    _message = "Error: invalid argument in function - " + func_name;
+    _function_name = func_name;
+}
+
+const char *InvalidArgument::what() {
+    return _message.c_str();
+}
+
+const std::string &InvalidArgument::getFunctionName() {
+    return _function_name;
 }
