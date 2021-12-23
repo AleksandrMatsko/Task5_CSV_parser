@@ -18,12 +18,12 @@ public:
 class InvalidLineFormat : public std::exception {
 private:
     std::string _message;
-    size_t _line_num;
+    int _line_num;
 
 public:
-    InvalidLineFormat(size_t line_num);
+    InvalidLineFormat(int line_num);
     const char* what();
-    size_t getLineNum();
+    int getLineNum();
 };
 
 class IndexOutOfRange : public std::exception {
@@ -38,14 +38,25 @@ public:
 class UnknownType : public std::exception {
 private:
     std::string _message;
-    size_t _line_number;
-    size_t _cell_number;
+    int _line_number;
+    int _cell_number;
 
 public:
-    UnknownType(size_t line_number, size_t cell_number);
+    UnknownType(int line_number, int cell_number);
     const char* what();
-    size_t getLineNumber();
-    size_t getCellNumber();
+    int getLineNumber();
+    int getCellNumber();
+};
+
+class InvalidArgument : public std::exception {
+private:
+    std::string _message;
+    std::string _function_name;
+
+public:
+    InvalidArgument(const std::string& func_name);
+    const char* what();
+    const std::string& getFunctionName();
 };
 
 #endif //TASK5_CSV_PARSER_EXCEPTIONS_H
